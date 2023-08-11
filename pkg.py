@@ -1,4 +1,5 @@
 import sys
+
 class fileManager():
     def __init__(self, repo_path="repo.db", pkg_path="pkgs.db"):
         self.repo_path = repo_path
@@ -43,7 +44,8 @@ class fileManager():
         if pkg_name in graph:
             dependencies.update(graph[pkg_name])
             for dep in graph[pkg_name]:
-                dependencies.update(self.getDependencies(dep))
+                if dep not in self.pkg_list:
+                  dependencies.update(self.getDependencies(dep))
         return dependencies
     
     def install(self,pkg_name):
