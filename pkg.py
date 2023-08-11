@@ -4,13 +4,15 @@ class fileManager():
     def __init__(self, repo_path="repo.db", pkg_path="pkgs.db"):
         self.repo_path = repo_path
         self.pkg_path = pkg_path
-    def updateRepo(self, pkg_list):
+        self.pkg_list = self.getPkgs()
+        self.repo_graph = self.getRepoGraph()
+    def updatepkgs(self, pkg_list):
         # Update the repo with the given list of packages
         # pkg_list is a list of package names
         with open(self.pkg_path, 'w') as f:
             for pkg in pkg_list:
-                f.write(pkg.name + '\n')
-    def getRepo(self):
+                f.write(pkg + '\n')
+    def getPkgs(self):
         # Return a list of package names
         with open(self.pkg_path, 'r') as f:
             return [line.strip() for line in f.readlines()]
@@ -18,36 +20,72 @@ class fileManager():
         # Return a dictionary of dependencies
         # The key is the package name
         # The value is a list of dependencies
-        dependencies = {}
+        repo_graph = {}
         with open(self.repo_path, 'r') as file:
-            for line in file:
-                package, deps = line.strip().split(':')
-                dependencies[package] = deps.strip().split()
+          for line in file:
+            package, deps = line.strip().split(':')
+            repo_graph[package] = deps.strip().split()
+        return repo_graph
+    def getDependents(self,pkg_name):
+        # Return a set of dependents
+        graph = self.repo_graph
+        dependents = set()
+        for package in graph:
+            if pkg_name in graph[package]:
+                if package in self.pkg_list and package not in dependents:
+                  dependents.add(package)
+                  dependents.update(self.getDependents(package))
+        return dependents
+    def getDependencies(self,pkg_name):
+        # Return a set of dependencies
+        graph = self.repo_graph
+        dependencies = set()
+        for package in graph:
+            if package == pkg_name:
+                dependencies.update(graph[package])
+                for dep in graph[package]:
+                    dependencies.update(self.getDependencies(dep))
         return dependencies
+    
+    def install(self,pkg_name):
+        # Install the given package and dependencies
+        dependecies = self.getDependencies(pkg_name)
+        print("installing", pkg_name, dependecies)
+        self.pkg_list.append(pkg_name)
+        self.pkg_list.extend(dependecies)
+        self.updatepkgs(self.pkg_list)
 
-def getDependencies(pkg, fm):
-    RepoGraph = fm.getRepoGraph()
+    def uninstall(self,pkg_name):
+        # Uninstall the given package and dependents
+        dependents = self.getDependents(pkg_name)
+        print("uninstalling", pkg_name, dependents)
+        self.pkg_list.remove(pkg_name)
+        for dep in dependents:
+            self.pkg_list.remove(dep)
+        self.updatepkgs(self.pkg_list)
 
-def install(pkg_name):
-    # Install the given package and dependencies
-    pass
-def uninstall(pkg_name):
-    # Uninstall the given package and dependents
-    pass
-def list_packages():
+def list_packages(pkgs_path="pkgs.db"):
     # List all installed packages
-    pass
+    print("Installed packages:")
+    with open(pkgs_path, 'r') as f:
+        for line in f:
+            print(line.strip())
+    
 
 if __name__ == "__main__":
     command = sys.argv[1]
+    fm = fileManager()
     if command not in ["install", "uninstall", "list"]:
         print("Invalid command")
         sys.exit(1)
     if command == "install":
+        print("install started")
         pkg_name = sys.argv[2]
-        install(pkg_name)
+        fm.install(pkg_name)
     if command == "uninstall":
+        print("uninstall started")
         pkg_name = sys.argv[2]
-        uninstall(pkg_name)
+        fm.uninstall(pkg_name)
     if command == "list":
+        print("list started")
         list_packages()
