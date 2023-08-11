@@ -1,5 +1,4 @@
 import sys
-
 class fileManager():
     def __init__(self, repo_path="repo.db", pkg_path="pkgs.db"):
         self.repo_path = repo_path
